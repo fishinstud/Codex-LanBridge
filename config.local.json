@@ -1,0 +1,35 @@
+{
+  "bridge": {
+    "agent_id": "windows-ui",
+    "mcp_server_name": "lanBridge",
+    "state_file": "state/windows-bridge-state.json"
+  },
+  "broker": {
+    "db": "broker.sqlite3",
+    "enabled": false,
+    "host": "0.0.0.0",
+    "port": 8765,
+    "token": "CHANGE-ME",
+    "url": "http://BROKER_IP:8765"
+  },
+  "endpoint": {
+    "agent_id": "windows-codex",
+    "codex_bin": "codex.cmd",
+    "default_approval_policy": "never",
+    "default_cwd": "C:\\",
+    "default_sandbox": "danger-full-access",
+    "role_instructions_file": "examples/windows-endpoint-instructions.txt",
+    "state_file": "state/windows-endpoint-state.json"
+  },
+  "network_drives": [
+    {
+      "letter": "M",
+      "path": "\\\\SERVER\\SHARE",
+      "persistent": true,
+      "username": "CHANGE-ME",
+      "password": "CHANGE-ME",
+      "credential_target": "SERVER_OR_IP"
+    }
+  ],
+  "machine_role": "windows"
+}

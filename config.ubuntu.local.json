@@ -1,0 +1,25 @@
+{
+  "bridge": {
+    "agent_id": "ubuntu-ui",
+    "mcp_server_name": "lanBridge",
+    "state_file": "state/ubuntu-bridge-state.json"
+  },
+  "broker": {
+    "db": "broker.sqlite3",
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8765,
+    "token": "CHANGE-ME",
+    "url": "http://BROKER_IP:8765"
+  },
+  "endpoint": {
+    "agent_id": "ubuntu-codex",
+    "codex_bin": "/root/.nvm/versions/node/v22.21.1/bin/codex",
+    "default_approval_policy": "never",
+    "default_cwd": "/root",
+    "default_sandbox": "workspace-write",
+    "role_instructions_file": "examples/ubuntu-endpoint-instructions.txt",
+    "state_file": "state/ubuntu-endpoint-state.json"
+  },
+  "machine_role": "ubuntu"
+}
