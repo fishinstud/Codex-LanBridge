@@ -1,0 +1,15 @@
+[Unit]
+Description=Codex LAN Broker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/ABS/PATH/TO/codex_lan_bridge
+Environment=CODEX_LAN_TOKEN=REPLACE_ME
+ExecStart=/usr/bin/python3 /ABS/PATH/TO/codex_lan_bridge/broker_server.py --host 0.0.0.0 --port 8765 --db /ABS/PATH/TO/codex_lan_bridge/broker.sqlite3 --token REPLACE_ME
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
