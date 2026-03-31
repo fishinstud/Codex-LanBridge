@@ -126,7 +126,7 @@ Windows also supports an optional `network_drives` section. Example:
 ]
 ```
 
-`windows/Start-CodexWindowsSide.ps1` will try to map those drives before the endpoint starts. The current Windows launcher also contains fallback support for deployment-specific `BF6TOOLS_*` environment variables.
+`windows/Start-CodexWindowsSide.ps1` will try to map those drives before the endpoint starts. The current Windows launcher also contains fallback support for deployment-specific environment variables.
 
 ## Setup
 
