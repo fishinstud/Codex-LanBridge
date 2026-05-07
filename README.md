@@ -328,3 +328,11 @@ This package currently contains both host-specific config variants:
 - `config.ubuntu.local.json`
 
 That is useful for operational reference, but those files should normally be removed or scrubbed before a public GitHub push.
+
+## Reliability Improvements (May 2026)
+
+Recent bridge-hardening changes improve first-round communication success:
+
+- `remote_codex` and `remote_codex_start` now perform optimistic endpoint dispatch when broker agent liveness is temporarily stale, as long as the requested `peer_agent` id is syntactically valid.
+- This reduces startup race failures where an endpoint is reachable but has not yet refreshed broker registration.
+- Invalid agent ids are still rejected before dispatch.
