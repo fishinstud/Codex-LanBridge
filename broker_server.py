@@ -22,6 +22,9 @@ STALE_AGENT_RETENTION_SECONDS = 15 * 60
 MESSAGE_RETENTION_SECONDS = 7 * 24 * 60 * 60
 CLEANUP_INTERVAL_SECONDS = 5 * 60
 SQLITE_BUSY_TIMEOUT_MS = 5000
+MAX_POLL_WAIT_SECONDS = 60
+MAX_POLL_LIMIT = 500
+MAX_CONVERSATION_LIMIT = 1000
 
 
 def parse_args() -> argparse.Namespace:
@@ -309,8 +312,30 @@ class BrokerHandler(BaseHTTPRequestHandler):
 
     def _read_json(self) -> Dict[str, Any]:
         content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length < 0:
+            raise ValueError("invalid Content-Length")
+        if content_length > 5 * 1024 * 1024:
+            raise ValueError("request body too large")
         raw = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
         return json.loads(raw)
+
+    @staticmethod
+    def _parse_bounded_int(
+        raw_value: str,
+        *,
+        field: str,
+        minimum: int,
+        maximum: int,
+    ) -> int:
+        try:
+            parsed = int(raw_value)
+        except ValueError as exc:
+            raise ValueError(f"{field} must be an integer") from exc
+        if parsed < minimum or parsed > maximum:
+            raise ValueError(
+                f"{field} must be between {minimum} and {maximum}"
+            )
+        return parsed
 
     def _send_json(self, status: HTTPStatus, payload: Dict[str, Any]) -> None:
         encoded = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
@@ -340,9 +365,24 @@ class BrokerHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/v1/messages":
                 agent_id = validate_agent_id(query.get("agent_id", [""])[0])
-                after_seq = int(query.get("after_seq", ["0"])[0])
-                wait_seconds = int(query.get("wait_seconds", ["0"])[0])
-                limit = int(query.get("limit", ["50"])[0])
+                after_seq = self._parse_bounded_int(
+                    query.get("after_seq", ["0"])[0],
+                    field="after_seq",
+                    minimum=0,
+                    maximum=2_147_483_647,
+                )
+                wait_seconds = self._parse_bounded_int(
+                    query.get("wait_seconds", ["0"])[0],
+                    field="wait_seconds",
+                    minimum=0,
+                    maximum=MAX_POLL_WAIT_SECONDS,
+                )
+                limit = self._parse_bounded_int(
+                    query.get("limit", ["50"])[0],
+                    field="limit",
+                    minimum=1,
+                    maximum=MAX_POLL_LIMIT,
+                )
                 messages = self.broker.poll_messages(
                     agent_id, after_seq, wait_seconds, limit
                 )
@@ -359,7 +399,12 @@ class BrokerHandler(BaseHTTPRequestHandler):
                 conversation_id = query.get("conversation_id", [""])[0]
                 if not conversation_id:
                     raise ValueError("conversation_id is required")
-                limit = int(query.get("limit", ["100"])[0])
+                limit = self._parse_bounded_int(
+                    query.get("limit", ["100"])[0],
+                    field="limit",
+                    minimum=1,
+                    maximum=MAX_CONVERSATION_LIMIT,
+                )
                 messages = self.broker.get_conversation(conversation_id, limit)
                 self._send_json(
                     HTTPStatus.OK,
