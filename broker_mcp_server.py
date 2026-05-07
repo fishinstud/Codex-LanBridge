@@ -22,6 +22,7 @@ from bridge_common import (
     new_request_id,
     summarize_text,
     utc_now,
+    validate_agent_id,
     write_json_file,
 )
 
@@ -1114,7 +1115,18 @@ class BrokerMcpServer:
         if not peer_agent or not prompt:
             raise ValueError("peer_agent and prompt are required")
         timeout_secs = int(arguments.get("timeout_secs") or 900)
-        resolved_peer_agent = self._resolve_remote_codex_peer(peer_agent)
+        try:
+            resolved_peer_agent = self._resolve_remote_codex_peer(peer_agent)
+        except ValueError as exc:
+            # Allow optimistic dispatch when the endpoint has not finished
+            # heartbeating into broker state yet. This avoids false negatives
+            # during startup races and transient broker liveness skew.
+            validate_agent_id(peer_agent)
+            self._log(
+                "peer resolution warning; dispatching anyway: "
+                f"{peer_agent} ({exc})"
+            )
+            resolved_peer_agent = peer_agent
         outbound_request_id = new_request_id()
         self._log(
             f"-> {resolved_peer_agent} request={outbound_request_id} "

@@ -73,6 +73,7 @@ class EndpointDaemonFollowupResumeTests(unittest.TestCase):
             prompt="follow up",
             thread_id="thread-1",
             timeout_seconds=1800,
+            event_handler=unittest.mock.ANY,
         )
         daemon._bind_session_client.assert_called_once_with("thread-1", codex)
         daemon._release_session_client.assert_called_once_with(
