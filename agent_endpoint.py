@@ -47,6 +47,8 @@ FORWARDED_CODEX_EVENT_TYPES = {
 REQUEST_TIMEOUT_GRACE_SECONDS = 5
 ORPHAN_REQUEST_MIN_AGE_SECONDS = 30
 AGENT_LIVENESS_CACHE_SECONDS = 15
+MIN_TIMEOUT_SECONDS = 30
+MAX_TIMEOUT_SECONDS = 7200
 
 
 def _parse_utc_timestamp(timestamp: Any) -> Optional[datetime]:
@@ -301,7 +303,7 @@ class EndpointDaemon:
                         approval_policy=approval_policy,
                         developer_instructions=developer_instructions or None,
                         base_instructions=body.get("base_instructions") or None,
-                        timeout_seconds=int(body.get("timeout_secs") or 1800),
+                        timeout_seconds=self._parse_timeout_seconds(body.get("timeout_secs")),
                         event_handler=lambda event: self._forward_codex_event(
                             message, request_id, event
                         ),
@@ -409,7 +411,17 @@ class EndpointDaemon:
         thread_id = message.get("body", {}).get("thread_id") or None
         if thread_id:
             return f"thread:{thread_id}"
-        return f"seq:{int(message['seq'])}"
+        return f"seq:{message.get('seq', '-') }"
+
+    @staticmethod
+    def _parse_timeout_seconds(raw_value: Any) -> int:
+        if raw_value in (None, ""):
+            return 1800
+        try:
+            parsed = int(raw_value)
+        except (TypeError, ValueError):
+            return 1800
+        return max(MIN_TIMEOUT_SECONDS, min(MAX_TIMEOUT_SECONDS, parsed))
 
     def _track_codex(self, codex: CodexMcpClient) -> None:
         with self._state_lock:
@@ -756,7 +768,7 @@ class EndpointDaemon:
                 result = codex.run_codex(
                     prompt=prompt,
                     thread_id=thread_id,
-                    timeout_seconds=int(body.get("timeout_secs") or 1800),
+                    timeout_seconds=self._parse_timeout_seconds(body.get("timeout_secs")),
                     event_handler=lambda event: self._forward_codex_event(
                         message, request_id, event
                     ),
@@ -923,7 +935,7 @@ class EndpointDaemon:
         body: Dict[str, Any],
     ) -> Optional[bool]:
         age_seconds = self._message_age_seconds(message)
-        timeout_seconds = int(body.get("timeout_secs") or 1800)
+        timeout_seconds = self._parse_timeout_seconds(body.get("timeout_secs"))
         requester_agent = str(message.get("from_agent", "")).strip()
         if age_seconds > timeout_seconds + REQUEST_TIMEOUT_GRACE_SECONDS:
             error_text = (

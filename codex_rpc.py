@@ -91,8 +91,10 @@ class StdioJsonRpcClient:
         self.process = None
 
     def _fail_pending(self, message: str) -> None:
-        pending = list(self._pending.items())
-        self._pending.clear()
+        with self._lock:
+            pending = list(self._pending.items())
+            self._pending.clear()
+            self._notification_handlers.clear()
         for _, response_queue in pending:
             try:
                 response_queue.put_nowait(
@@ -134,7 +136,8 @@ class StdioJsonRpcClient:
             if message_id is None:
                 self._handle_notification(message)
                 continue
-            pending = self._pending.get(int(message_id))
+            with self._lock:
+                pending = self._pending.get(int(message_id))
             if pending:
                 pending.put(message)
         returncode = process.poll()
@@ -157,7 +160,8 @@ class StdioJsonRpcClient:
             request_id_int = int(request_id)
         except (TypeError, ValueError):
             return
-        handler = self._notification_handlers.get(request_id_int)
+        with self._lock:
+            handler = self._notification_handlers.get(request_id_int)
         if handler is None:
             return
         try:

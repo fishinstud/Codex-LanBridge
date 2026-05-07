@@ -336,3 +336,15 @@ Recent bridge-hardening changes improve first-round communication success:
 - `remote_codex` and `remote_codex_start` now perform optimistic endpoint dispatch when broker agent liveness is temporarily stale, as long as the requested `peer_agent` id is syntactically valid.
 - This reduces startup race failures where an endpoint is reachable but has not yet refreshed broker registration.
 - Invalid agent ids are still rejected before dispatch.
+
+## Reliability Hardening (May 2026)
+
+First-round communications hardening changes included in this repository:
+
+- Broker query validation now enforces bounded numeric ranges for message polling and conversation retrieval, preventing malformed or extreme parameters from stalling worker threads.
+- Broker request body handling now rejects invalid and oversized JSON payloads early with clear client errors.
+- Endpoint timeout parsing is now sanitized and clamped to safe bounds so malformed timeout values do not crash request handling and very small/huge values do not destabilize request flow.
+- Endpoint lane-key fallback no longer assumes every message has an integer `seq` and avoids request-crashing cast failures on unexpected payloads.
+- JSON-RPC pending-request and notification handler state now uses lock-protected access during reader-thread callbacks and shutdown cleanup, reducing race conditions under heavy concurrent traffic.
+
+These changes are designed to reduce dropped replies, avoid avoidable endpoint crashes, and keep request/response flow healthy during noisy or partially malformed network conditions.
